@@ -1,9 +1,5 @@
-import json
+import paho.mqtt.client as mqtt
 
-with open("state.json", "w+") as rf:
-    data = json.load(rf)
-    print(data)
-
-data["led"] = not data["led"]
-json.dump(data, rf)
-print(data)
+client = mqtt.Client()
+client.connect('192.168.29.69', 1883, 60)
+client.loop_start()

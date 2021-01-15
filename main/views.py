@@ -34,8 +34,34 @@ def index(request):
         form = IOForm()
     return JsonResponse({"state" : data["led"]})
 
+def ioDevice(request):
+    print("Test")
+    client = mqtt.Client()
+    client.connect('localhost', 1883, 60)
+    client.loop_start()
+    if request.method == 'POST':
+        form = IoDeviceForm(request.POST)
+        if form.is_valid():
+            boardId = form.cleaned_data['boardId']
+            pinAdress = form.cleaned_data['pinAdress']
+            stateTc = form.cleaned_data['stateTc']
+
+            brd = Board.objects.get(id=boardId)
+            dvc = Device.objects.get(pinAdress=pinAdress)
+            if stateTc == True:
+                msg = pinAdress + '/OFF'
+                client.publish(brd.boardName , msg)
+            elif stateTc == False:
+                msg = pinAdress + '/ON'
+                client.publish(brd.boardName , msg)
+            dvc.state = not dvc.state
+            dvc.save()
+    else:
+        form = IOForm()
+    return JsonResponse({"page" : "working on"}, safe=False)
+
+
 def addRoomView(request):
-    print(request.method)
     if request.method == "POST":
         form = addRoomForm(request.POST)
         if form.is_valid():
@@ -54,18 +80,52 @@ def roomList(request):
     for x in ls:
         jsonDict = {
                 "roomName" : x.roomName,
+                "roomId" : x.id,
                 "floor" : x.floor
                 }
         finalDict.append(jsonDict)
     return JsonResponse(finalDict, safe=False)
 
-def index1(request):
-    if request.method  == "POST":
-        form = IOForm(request.POST)
-        if form.is_valid():
-            i = form.cleaned_data['io']
-            print("i > ", i)
-    else:
-        form = IOForm()
+def roomBoards(request, id):
+    ls = Board.objects.filter(roomId=id)
+    finalDict = []
+    for x in ls:
+        jsonDict = {
+            "boardName" : x.boardName,
+            "boardIp" : x.boardIp
+        }
+        finalDict.append(jsonDict)
+    return JsonResponse(finalDict, safe=False)
 
+def boardDevices(request, boardId):
+    ls = Device.object.filter(boardId=boardId)
+    finalDict = []
+    for x in ls:
+        jsonDict = {
+            "deviceName" : x.deviceName,
+            "state" : x.state,
+            "pinAdress": x.pinAdress
+        }
+        finalDict.append(jsonDict)
+    return JsonResponse(finalDict, safe=False)
+
+def roomDevices(request, id):
+    ls = Board.objects.filter(roomId=id)
+    finalDict = []
+    for x in ls:
+        devc = Device.objects.filter(boardId = x.id)
+        for y in devc:
+            jsonDict = {
+                "boardId" : y.boardId.id,
+                "deviceName" : y.deviceName,
+                "state" : y.state,
+                "pinAdress" : y.pinAdress,
+            }
+            finalDict.append(jsonDict)
+    return JsonResponse(finalDict, safe=False)
+
+def index1(request):
+    x = Device.objects.all()
+    for y in x :
+        print(y.deviceName, y.state)
     return JsonResponse({"page" : "index1"})
